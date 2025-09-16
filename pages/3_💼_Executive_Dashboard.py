@@ -33,10 +33,33 @@ except ImportError:
         return df_copy
     
     def safe_dataframe_display(df, **kwargs):
-        if 'use_container_width' in kwargs:
-            use_container_width = kwargs.pop('use_container_width')
-            kwargs['width'] = "stretch" if use_container_width else "content"
-        return safe_dataframe_display(prepare_df_for_streamlit(df), **kwargs)
+        """Fallback safe dataframe display function"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle Series input (convert to DataFrame)
+        if hasattr(df, 'to_frame'):  # It's a Series
+            df = df.to_frame()
+        
+        # Fix DataFrame serialization
+        df_copy = df.copy()
+        for col in df_copy.columns:
+            if pd.api.types.is_object_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype('string').fillna("")
+            elif pd.api.types.is_bool_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype(int)
+        
+        # CRITICAL: Call st.dataframe, NOT safe_dataframe_display!
+        return st.dataframe(df_copy, **kwargs)
+
 
 st.set_page_config(
     page_title="💼 Executive Dashboard",
@@ -632,3 +655,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+

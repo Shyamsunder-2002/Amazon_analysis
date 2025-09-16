@@ -49,16 +49,53 @@ def fix_dataframe_for_streamlit(df):
     
     return df_copy
 
-def safe_dataframe_display(df, **kwargs):
-    """Display DataFrame with fixed parameters and serialization"""
-    # Fix deprecated parameter
-    if 'use_container_width' in kwargs:
-        use_container_width = kwargs.pop('use_container_width')
-        kwargs['width'] = "stretch" if use_container_width else "content"
+    def safe_dataframe_display(df, **kwargs):
+        """Fallback safe dataframe display function"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle Series input (convert to DataFrame)
+        if hasattr(df, 'to_frame'):  # It's a Series
+            df = df.to_frame()
+        
+        # Fix DataFrame serialization
+        df_copy = df.copy()
+        for col in df_copy.columns:
+            if pd.api.types.is_object_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype('string').fillna("")
+            elif pd.api.types.is_bool_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype(int)
+        
+        # CRITICAL: Call st.dataframe, NOT safe_dataframe_display!
+        return st.dataframe(df_copy, **kwargs)
+
+def fix_dataframe_for_streamlit(df):
+    """Fix DataFrame for Arrow serialization"""
+    if df is None or df.empty:
+        return df
+        
+    df_copy = df.copy()
     
-    # Fix serialization
-    df_fixed = fix_dataframe_for_streamlit(df)
-    return st.dataframe(df_fixed, **kwargs)
+    for col in df_copy.columns:
+        if pd.api.types.is_object_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype('string').fillna("")
+        elif pd.api.types.is_bool_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype(int)
+        elif pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
+        elif pd.api.types.is_numeric_dtype(df_copy[col]):
+            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').fillna(0)
+    
+    return df_copy
+
 
 def safe_plotly_chart(fig, **kwargs):
     """Display Plotly chart with fixed parameters"""
@@ -149,3 +186,7 @@ def prepare_ml_features_safe(df):
             features_df[feature] = 0
     
     return features_df, ml_features
+
+
+
+

@@ -40,11 +40,42 @@ except ImportError:
                 df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d %H:%M:%S').fillna("")
         return df_copy
     
+def fix_dataframe_for_streamlit(df):
+    """Fix DataFrame for Arrow serialization"""
+    if hasattr(df, 'to_frame'):  # Handle Series input
+        df = df.to_frame()
+    
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if pd.api.types.is_object_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype('string').fillna("")
+        elif pd.api.types.is_bool_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype(int)
+        elif pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
+    return df_copy
+
     def safe_dataframe_display(df, **kwargs):
+        """Safe dataframe display with proper parameter handling"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle deprecated use_container_width (if still present)
         if 'use_container_width' in kwargs:
             use_container_width = kwargs.pop('use_container_width')
-            kwargs['width'] = "stretch" if use_container_width else "content"
-        return safe_dataframe_display(fix_dataframe_for_streamlit(df), **kwargs)
+            if use_container_width:
+                kwargs['use_container_width'] = True
+        
+        # Fix DataFrame and display
+        df_fixed = fix_dataframe_for_streamlit(df)
+        return st.dataframe(df_fixed, **kwargs)
     
     def safe_plotly_chart(fig, **kwargs):
         if 'use_container_width' in kwargs:
@@ -76,10 +107,32 @@ except ImportError:
         return df_copy
     
     def safe_dataframe_display(df, **kwargs):
-        if 'use_container_width' in kwargs:
-            use_container_width = kwargs.pop('use_container_width')
-            kwargs['width'] = "stretch" if use_container_width else "content"
-        return safe_dataframe_display(prepare_df_for_streamlit(df), **kwargs)
+        """Fallback safe dataframe display function"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle Series input (convert to DataFrame)
+        if hasattr(df, 'to_frame'):  # It's a Series
+            df = df.to_frame()
+        
+        # Fix DataFrame serialization
+        df_copy = df.copy()
+        for col in df_copy.columns:
+            if pd.api.types.is_object_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype('string').fillna("")
+            elif pd.api.types.is_bool_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype(int)
+        
+        # CRITICAL: Call st.dataframe, NOT safe_dataframe_display!
+        return st.dataframe(df_copy, **kwargs)
 
 st.set_page_config(
     page_title="📊 EDA Analysis",
@@ -295,7 +348,7 @@ def generate_and_display_plot(df, plot_name, analyzer):
                 insights = [
                     f"🚀 UPI adoption increased by {upi_growth:.1f} percentage points",
                     f"📱 Digital payments now represent {df[df['payment_method'].isin(['UPI', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet'])]['payment_method'].count() / len(df) * 100:.1f}% of transactions",
-                    f"💳 Most popular payment method: {df['payment_method'].value_counts().index[0]} ({df['payment_method'].value_counts().iloc[0] / len(df) * 100:.1f}%)"
+                    f"💳 Most popular payment method: {df['payment_method'].value_counts().to_frame().index[0]} ({df['payment_method'].value_counts().to_frame().iloc[0] / len(df) * 100:.1f}%)"
                 ]
             
             elif "Plot 5" in plot_name:
@@ -337,9 +390,9 @@ def generate_and_display_plot(df, plot_name, analyzer):
             
             elif "Plot 9" in plot_name:
                 fig = analyzer.plot_9_age_demographics(df)
-                dominant_age = df['age_group'].value_counts().index[0]
+                dominant_age = df['age_group'].value_counts().to_frame().index[0]
                 insights = [
-                    f"👥 Dominant age group: {dominant_age} ({df['age_group'].value_counts().iloc[0]/len(df)*100:.1f}% of customers)",
+                    f"👥 Dominant age group: {dominant_age} ({df['age_group'].value_counts().to_frame().iloc[0]/len(df)*100:.1f}% of customers)",
                     f"💰 Highest spending age group: {df.groupby('age_group')['final_amount_inr'].mean().idxmax()} (₹{df.groupby('age_group')['final_amount_inr'].mean().max():,.0f} avg)",
                     f"📊 Age diversity: {df['age_group'].nunique()} distinct age segments"
                 ]
@@ -446,7 +499,7 @@ def main():
         
         # City filter
         st.markdown("### 🏙️ Cities")
-        top_cities = df['customer_city'].value_counts().head(10).index.tolist()
+        top_cities = df['customer_city'].value_counts().to_frame().head(10).index.tolist()
         selected_cities = st.multiselect(
             "Filter by cities:",
             options=top_cities,
@@ -492,7 +545,7 @@ def main():
             with col1:
                 st.markdown("**Revenue Statistics:**")
                 revenue_stats = df_filtered['final_amount_inr'].describe()
-                safe_dataframe_display(revenue_stats, width="stretch")
+                st.dataframe(revenue_stats, width="stretch")
             
             with col2:
                 st.markdown("**Customer Statistics:**")
@@ -504,7 +557,7 @@ def main():
                 }
                 
                 stats_df = pd.DataFrame(list(customer_stats.items()), columns=['Metric', 'Value'])
-                safe_dataframe_display(stats_df, width="stretch", hide_index=True)
+                st.dataframe(stats_df, width="stretch", hide_index=True)
     
     # Batch analysis option
     st.markdown("## 🚀 Batch Analysis")
@@ -575,3 +628,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+

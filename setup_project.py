@@ -153,7 +153,7 @@ def prepare_df_for_streamlit(df):
     
     return df_copy
 
-def safe_dataframe_display(df, **kwargs):
+def st.dataframe(df, **kwargs):
     """Handle deprecated use_container_width parameter"""
     if 'use_container_width' in kwargs:
         use_container_width = kwargs.pop('use_container_width')
@@ -215,3 +215,7 @@ if __name__ == "__main__":
     print("\n📋 Next steps:")
     print("1. Run: streamlit run Home.py")
     print("2. All errors should be resolved!")
+
+
+
+

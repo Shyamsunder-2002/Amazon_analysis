@@ -449,7 +449,7 @@ class DataCleaner:
             return payment_mappings.get(payment, payment.title())
         
         df[payment_column] = df[payment_column].apply(standardize_payment)
-        unique_methods = df[payment_column].value_counts()
+        unique_methods = df[payment_column].value_counts().to_frame()
         
         self.cleaning_reports['payment_methods'] = {
             'unique_methods': len(unique_methods),
@@ -504,3 +504,7 @@ def test_data_cleaning():
     cleaner = DataCleaner()
     # df_cleaned = cleaner.clean_complete_dataset(raw_df)
     return cleaner
+
+
+
+

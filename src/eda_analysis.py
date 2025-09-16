@@ -519,7 +519,7 @@ class EDAAnalyzer:
         )
         
         # Segment pie chart
-        segment_counts = clv_data['clv_segment'].value_counts()
+        segment_counts = clv_data['clv_segment'].value_counts().to_frame()
         fig.add_trace(
             go.Pie(labels=segment_counts.index, values=segment_counts.values, name='Segments'),
             row=1, col=2
@@ -886,3 +886,6 @@ class EDAAnalyzer:
         
         print(f"✅ Generated all {self.plots_generated} EDA visualizations successfully!")
         return plots
+
+
+

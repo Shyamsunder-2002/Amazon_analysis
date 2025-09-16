@@ -40,11 +40,42 @@ except ImportError:
                 df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d %H:%M:%S').fillna("")
         return df_copy
     
+def fix_dataframe_for_streamlit(df):
+    """Fix DataFrame for Arrow serialization"""
+    if hasattr(df, 'to_frame'):  # Handle Series input
+        df = df.to_frame()
+    
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if pd.api.types.is_object_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype('string').fillna("")
+        elif pd.api.types.is_bool_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype(int)
+        elif pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
+    return df_copy
+
     def safe_dataframe_display(df, **kwargs):
+        """Safe dataframe display with proper parameter handling"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle deprecated use_container_width (if still present)
         if 'use_container_width' in kwargs:
             use_container_width = kwargs.pop('use_container_width')
-            kwargs['width'] = "stretch" if use_container_width else "content"
-        return safe_dataframe_display(fix_dataframe_for_streamlit(df), **kwargs)
+            if use_container_width:
+                kwargs['use_container_width'] = True
+        
+        # Fix DataFrame and display
+        df_fixed = fix_dataframe_for_streamlit(df)
+        return st.dataframe(df_fixed, **kwargs)
     
     def safe_plotly_chart(fig, **kwargs):
         if 'use_container_width' in kwargs:
@@ -82,10 +113,33 @@ except ImportError:
         return df_copy
     
     def safe_dataframe_display(df, **kwargs):
-        if 'use_container_width' in kwargs:
-            use_container_width = kwargs.pop('use_container_width')
-            kwargs['width'] = "stretch" if use_container_width else "content"
-        return safe_dataframe_display(prepare_df_for_streamlit(df), **kwargs)
+        """Fallback safe dataframe display function"""
+        
+        # Handle width parameter correctly
+        width = kwargs.pop('width', None)
+        
+        if width == 'stretch':
+            kwargs['use_container_width'] = True
+        elif width == 'content':
+            kwargs['width'] = 700
+        elif isinstance(width, int):
+            kwargs['width'] = width
+        
+        # Handle Series input (convert to DataFrame)
+        if hasattr(df, 'to_frame'):  # It's a Series
+            df = df.to_frame()
+        
+        # Fix DataFrame serialization
+        df_copy = df.copy()
+        for col in df_copy.columns:
+            if pd.api.types.is_object_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype('string').fillna("")
+            elif pd.api.types.is_bool_dtype(df_copy[col]):
+                df_copy[col] = df_copy[col].astype(int)
+        
+        # CRITICAL: Call st.dataframe, NOT safe_dataframe_display!
+        return st.dataframe(df_copy, **kwargs)
+
 
 # Custom CSS
 st.markdown("""
@@ -261,14 +315,14 @@ def demonstrate_cleaning_challenges(df):
         
         with col1:
             st.markdown("**Before Cleaning:**")
-            date_sample = df['order_date'].value_counts().head(10)
+            date_sample = df['order_date'].value_counts().to_frame().head(10)
             st.write(date_sample)
         
         with col2:
             st.markdown("**After Cleaning:**")
             df_cleaned = cleaner.clean_order_dates(df.copy())
             if not df_cleaned.empty:
-                cleaned_dates = df_cleaned['order_date'].dt.date.value_counts().head(10)
+                cleaned_dates = df_cleaned['order_date'].dt.date.value_counts().to_frame().head(10)
                 st.write(cleaned_dates)
             else:
                 st.write("No valid dates found")
@@ -292,7 +346,7 @@ def demonstrate_cleaning_challenges(df):
         
         with col1:
             st.markdown("**Before Cleaning:**")
-            price_sample = df['original_price_inr'].value_counts().head(10)
+            price_sample = df['original_price_inr'].value_counts().to_frame().head(10)
             st.write(price_sample)
         
         with col2:
@@ -322,7 +376,7 @@ def demonstrate_cleaning_challenges(df):
         
         with col1:
             st.markdown("**Before Cleaning:**")
-            rating_sample = df['customer_rating'].value_counts().head(10)
+            rating_sample = df['customer_rating'].value_counts().to_frame().head(10)
             st.write(rating_sample)
         
         with col2:
@@ -349,13 +403,13 @@ def demonstrate_cleaning_challenges(df):
         
         with col1:
             st.markdown("**Before Cleaning:**")
-            city_sample = df['customer_city'].value_counts().head(10)
+            city_sample = df['customer_city'].value_counts().to_frame().head(10)
             st.write(city_sample)
         
         with col2:
             st.markdown("**After Cleaning:**")
             df_city_cleaned = cleaner.standardize_cities(df.copy())
-            cleaned_cities = df_city_cleaned['customer_city'].value_counts().head(10)
+            cleaned_cities = df_city_cleaned['customer_city'].value_counts().to_frame().head(10)
             st.write(cleaned_cities)
     
     # Add similar implementations for challenges 5-10...
@@ -512,7 +566,7 @@ def main():
         )
     
     with col4:
-        data_types = df.dtypes.value_counts()
+        data_types = df.dtypes.value_counts().to_frame()
         st.metric(
             "📝 Data Types",
             f"{len(data_types)}",
@@ -526,7 +580,7 @@ def main():
     # Data preview
     with st.expander("🔍 Raw Data Preview", expanded=False):
         st.markdown("### First 10 Rows of Raw Data")
-        safe_dataframe_display(df.head(10), width="stretch")
+        st.dataframe(df.head(10), width="stretch")
         
         st.markdown("### Data Schema Information")
         col1, col2 = st.columns(2)
@@ -539,13 +593,13 @@ def main():
                 'Non-Null Count': df.count().values,
                 'Null Count': df.isnull().sum().values
             })
-            safe_dataframe_display(dtype_info, width="stretch")
+            st.dataframe(dtype_info, width="stretch")
         
         with col2:
             st.markdown("**Statistical Summary:**")
             numeric_columns = df.select_dtypes(include=[np.number]).columns
             if len(numeric_columns) > 0:
-                safe_dataframe_display(df[numeric_columns].describe(), width="stretch")
+                st.dataframe(df[numeric_columns].describe(), width="stretch")
             else:
                 st.info("No numeric columns found for statistical summary")
     
@@ -580,8 +634,8 @@ def main():
             
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
-                date_sample = df['order_date'].value_counts().head(10)
-                safe_dataframe_display(date_sample, width="stretch")
+                date_sample = df['order_date'].value_counts().to_frame().head(10)
+                st.dataframe(date_sample, width="stretch")
                 
                 # Show problematic dates
                 st.markdown("**⚠️ Problematic Dates:**")
@@ -599,8 +653,8 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         if not df_date_cleaned.empty:
-                            cleaned_dates = df_date_cleaned['order_date'].dt.date.value_counts().head(10)
-                            safe_dataframe_display(cleaned_dates, width="stretch")
+                            cleaned_dates = df_date_cleaned['order_date'].dt.date.value_counts().to_frame().head(10)
+                            st.dataframe(cleaned_dates, width="stretch")
                             
                             # Show cleaning statistics
                             original_count = len(df)
@@ -660,8 +714,8 @@ def main():
             
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
-                price_sample = df[selected_price_col].value_counts().head(10)
-                safe_dataframe_display(price_sample, width="stretch")
+                price_sample = df[selected_price_col].value_counts().to_frame().head(10)
+                st.dataframe(price_sample, width="stretch")
                 
                 # Show data types and issues
                 st.markdown("**📊 Price Column Analysis:**")
@@ -683,7 +737,7 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         cleaned_prices = df_price_cleaned[selected_price_col].describe()
-                        safe_dataframe_display(cleaned_prices, width="stretch")
+                        st.dataframe(cleaned_prices, width="stretch")
                         
                         # Show cleaning effectiveness
                         original_valid = df[selected_price_col].notna().sum()
@@ -750,8 +804,8 @@ def main():
             
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
-                rating_sample = df[selected_rating_col].value_counts().head(10)
-                safe_dataframe_display(rating_sample, width="stretch")
+                rating_sample = df[selected_rating_col].value_counts().to_frame().head(10)
+                st.dataframe(rating_sample, width="stretch")
                 
                 # Rating format analysis
                 st.markdown("**🔍 Rating Format Analysis:**")
@@ -779,10 +833,10 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         cleaned_ratings = df_rating_cleaned[selected_rating_col].describe()
-                        safe_dataframe_display(cleaned_ratings, width="stretch")
+                        st.dataframe(cleaned_ratings, width="stretch")
                         
                         # Rating distribution
-                        rating_dist = df_rating_cleaned[selected_rating_col].value_counts().sort_index()
+                        rating_dist = df_rating_cleaned[selected_rating_col].value_counts().to_frame().sort_index()
                         
                         st.success(f"""
                         **Cleaning Results:**
@@ -849,13 +903,13 @@ def main():
             
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
-                city_sample = df[selected_city_col].value_counts().head(15)
-                safe_dataframe_display(city_sample, width="stretch")
+                city_sample = df[selected_city_col].value_counts().to_frame().head(15)
+                st.dataframe(city_sample, width="stretch")
                 
                 # Show city variations
                 st.markdown("**🔍 Identified Variations:**")
                 city_variations = []
-                unique_cities = df[selected_city_col].value_counts()
+                unique_cities = df[selected_city_col].value_counts().to_frame()
                 for city in unique_cities.index:
                     if isinstance(city, str):
                         lower_city = city.lower()
@@ -877,8 +931,8 @@ def main():
                         df_city_cleaned = cleaner.standardize_cities(df.copy(), selected_city_col)
                         
                         st.markdown("**✅ After Cleaning:**")
-                        cleaned_cities = df_city_cleaned[selected_city_col].value_counts().head(15)
-                        safe_dataframe_display(cleaned_cities, width="stretch")
+                        cleaned_cities = df_city_cleaned[selected_city_col].value_counts().to_frame().head(15)
+                        st.dataframe(cleaned_cities, width="stretch")
                         
                         # Show standardization results
                         original_unique = df[selected_city_col].nunique()
@@ -897,7 +951,7 @@ def main():
                     cleaner = DataCleaner()
                     df_temp = cleaner.standardize_cities(df.copy(), selected_city_col)
                     
-                    top_cities = df_temp[selected_city_col].value_counts().head(15)
+                    top_cities = df_temp[selected_city_col].value_counts().to_frame().head(15)
                     
                     fig = px.bar(
                         x=top_cities.values,
@@ -1049,7 +1103,7 @@ def display_pipeline_results(original_df, cleaned_df, cleaning_reports):
     }
     
     comparison_df = pd.DataFrame(comparison_data)
-    safe_dataframe_display(comparison_df, width="stretch", hide_index=True)
+    st.dataframe(comparison_df, width="stretch", hide_index=True)
     
     # Detailed operation reports
     st.markdown("### 📋 Detailed Operation Reports")
@@ -1157,3 +1211,7 @@ def generate_cleaning_report(cleaning_reports):
 
 if __name__ == "__main__":
     main()
+
+
+
+

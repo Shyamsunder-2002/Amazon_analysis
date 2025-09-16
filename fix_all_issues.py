@@ -63,7 +63,7 @@ def fix_dataframe_for_streamlit(df):
     
     return df_copy
 
-def safe_dataframe_display(df, **kwargs):
+def st.dataframe(df, **kwargs):
     """Display DataFrame with fixed parameters and serialization"""
     # Fix deprecated parameter
     if 'use_container_width' in kwargs:
@@ -189,13 +189,13 @@ def fix_all_analytics_files():
             content = f.read()
         
         # Fix use_container_width deprecation
-        content = re.sub(r'use_container_width=True', 'width="stretch"', content)
-        content = re.sub(r'use_container_width=False', 'width="content"', content)
+        content = re.sub(r'width="stretch"', 'width="stretch"', content)
+        content = re.sub(r'width="content"', 'width="content"', content)
         
         # Replace st.dataframe calls with safe version
-        content = re.sub(r'st\.dataframe\((.*?)\)', r'safe_dataframe_display(\1)', content)
-        content = re.sub(r'st\.plotly_chart\((.*?), use_container_width=True\)', r'safe_plotly_chart(\1)', content)
-        content = re.sub(r'st\.plotly_chart\((.*?), use_container_width=False\)', r'safe_plotly_chart(\1)', content)
+        content = re.sub(r'st\.dataframe\((.*?)\)', r'st.dataframe(\1)', content)
+        content = re.sub(r'st\.plotly_chart\((.*?), width="stretch"\)', r'safe_plotly_chart(\1)', content)
+        content = re.sub(r'st\.plotly_chart\((.*?), width="content"\)', r'safe_plotly_chart(\1)', content)
         
         # Add imports at the top if not present
         if 'from utils import' not in content:
@@ -224,7 +224,7 @@ except ImportError:
                 df_copy[col] = df_copy[col].astype('string').fillna("")
         return df_copy
     
-    def safe_dataframe_display(df, **kwargs):
+    def st.dataframe(df, **kwargs):
         if 'use_container_width' in kwargs:
             use_container_width = kwargs.pop('use_container_width')
             kwargs['width'] = "stretch" if use_container_width else "content"
@@ -396,3 +396,7 @@ if __name__ == "__main__":
     print("✅ Complete dataset with all columns")
     
     print("\n🚀 Next step: Run 'streamlit run Home.py'")
+
+
+
+

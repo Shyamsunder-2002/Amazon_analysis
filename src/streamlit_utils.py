@@ -47,8 +47,12 @@ def display_dataframe_safe(df, title="Data Preview"):
     try:
         df_display = prepare_df_for_streamlit(df)
         st.subheader(title)
-        st.dataframe(df_display, use_container_width=True)
+        st.dataframe(df_display, width="stretch")
     except Exception as e:
         st.error(f"Error displaying dataframe: {e}")
         st.write("Dataframe shape:", df.shape)
         st.write("Columns:", list(df.columns))
+
+
+
+

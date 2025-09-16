@@ -118,3 +118,7 @@ def render_status_indicator(status_value, thresholds, labels=None):
         color = "🔴"
     
     return f"{color} {status} ({status_value:.1f})"
+
+
+
+
