@@ -33,28 +33,11 @@ def prepare_df_for_streamlit(df):
     
     return df_copy
 
-def prepare_df_for_streamlit(df):
-    """Prepare DataFrame for Streamlit display"""
-    df_copy = df.copy()
-    for col in df_copy.columns:
-        if df_copy[col].dtype == 'object':
-            df_copy[col] = df_copy[col].astype(str).fillna("")
-        elif df_copy[col].dtype == 'bool':
-            df_copy[col] = df_copy[col].astype(int)
-        elif 'datetime' in str(df_copy[col].dtype):
-            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
-    return df_copy
-
-def safe_dataframe_display(df, **kwargs):
-    """Fallback safe dataframe display function"""
-    
-    # Handle deprecated use_container_width parameter
+def st.dataframe(df, **kwargs):
+    """Handle deprecated use_container_width parameter"""
     if 'use_container_width' in kwargs:
         use_container_width = kwargs.pop('use_container_width')
-        kwargs['width'] = 'stretch' if use_container_width else 'content'
+        kwargs['width'] = "stretch" if use_container_width else "content"
     
-    # Prepare DataFrame for display
     df_prepared = prepare_df_for_streamlit(df)
-    
-    # Return Streamlit dataframe display
     return st.dataframe(df_prepared, **kwargs)
