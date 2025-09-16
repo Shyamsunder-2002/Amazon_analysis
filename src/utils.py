@@ -1,192 +1,60 @@
 """
-Complete Streamlit utilities for Amazon India Analytics Platform
-ALL FIXES INCLUDED
+Universal utility functions for Amazon India Analytics Platform
 """
 
 import pandas as pd
 import numpy as np
 import streamlit as st
-from sklearn.preprocessing import LabelEncoder
 
 def safe_column_access(df, col_name, default_value=0):
-    """Safely access DataFrame column with fallback"""
+    """Safely access DataFrame column, return default if column doesn't exist"""
     if col_name in df.columns:
         return df[col_name]
     else:
-        if callable(default_value):
-            try:
-                return default_value()
-            except:
-                return pd.Series([0] * len(df), index=df.index)
-        elif isinstance(default_value, (list, tuple, np.ndarray)):
-            return pd.Series(default_value, index=df.index)
+        if isinstance(default_value, (int, float)):
+            return pd.Series([default_value] * len(df), index=df.index)
+        elif callable(default_value):
+            return default_value(df)
         else:
             return pd.Series([default_value] * len(df), index=df.index)
 
-def fix_dataframe_for_streamlit(df):
-    """Fix ALL DataFrame serialization issues for Streamlit/Arrow"""
-    if df is None or df.empty:
-        return df
-        
+def prepare_df_for_streamlit(df):
+    """Convert DataFrame to be Arrow-compatible"""
     df_copy = df.copy()
     
+    for col in df_copy.select_dtypes(include=['object']).columns:
+        df_copy[col] = df_copy[col].astype('string')
+    
     for col in df_copy.columns:
-        # Convert object columns to string
-        if pd.api.types.is_object_dtype(df_copy[col]):
-            df_copy[col] = df_copy[col].astype('string').fillna("")
-        
-        # Convert boolean to int
-        elif pd.api.types.is_bool_dtype(df_copy[col]):
-            df_copy[col] = df_copy[col].astype(int)
-        
-        # Fix datetime columns
-        elif pd.api.types.is_datetime64_any_dtype(df_copy[col]):
-            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
-        
-        # Ensure numeric columns are clean
-        elif pd.api.types.is_numeric_dtype(df_copy[col]):
-            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').fillna(0)
+        if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d %H:%M:%S')
+        elif isinstance(df_copy[col].dtype, pd.PeriodDtype):
+            df_copy[col] = df_copy[col].dt.to_timestamp().dt.strftime('%Y-%m-%d')
     
     return df_copy
 
-    def safe_dataframe_display(df, **kwargs):
-        """Fallback safe dataframe display function"""
-        
-        # Handle width parameter correctly
-        width = kwargs.pop('width', None)
-        
-        if width == 'stretch':
-            kwargs['use_container_width'] = True
-        elif width == 'content':
-            kwargs['width'] = 700
-        elif isinstance(width, int):
-            kwargs['width'] = width
-        
-        # Handle Series input (convert to DataFrame)
-        if hasattr(df, 'to_frame'):  # It's a Series
-            df = df.to_frame()
-        
-        # Fix DataFrame serialization
-        df_copy = df.copy()
-        for col in df_copy.columns:
-            if pd.api.types.is_object_dtype(df_copy[col]):
-                df_copy[col] = df_copy[col].astype('string').fillna("")
-            elif pd.api.types.is_bool_dtype(df_copy[col]):
-                df_copy[col] = df_copy[col].astype(int)
-        
-        # CRITICAL: Call st.dataframe, NOT safe_dataframe_display!
-        return st.dataframe(df_copy, **kwargs)
-
-def fix_dataframe_for_streamlit(df):
-    """Fix DataFrame for Arrow serialization"""
-    if df is None or df.empty:
-        return df
-        
+def prepare_df_for_streamlit(df):
+    """Prepare DataFrame for Streamlit display"""
     df_copy = df.copy()
-    
     for col in df_copy.columns:
-        if pd.api.types.is_object_dtype(df_copy[col]):
-            df_copy[col] = df_copy[col].astype('string').fillna("")
-        elif pd.api.types.is_bool_dtype(df_copy[col]):
+        if df_copy[col].dtype == 'object':
+            df_copy[col] = df_copy[col].astype(str).fillna("")
+        elif df_copy[col].dtype == 'bool':
             df_copy[col] = df_copy[col].astype(int)
-        elif pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+        elif 'datetime' in str(df_copy[col].dtype):
             df_copy[col] = df_copy[col].dt.strftime('%Y-%m-%d').fillna("")
-        elif pd.api.types.is_numeric_dtype(df_copy[col]):
-            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').fillna(0)
-    
     return df_copy
 
-
-def safe_plotly_chart(fig, **kwargs):
-    """Display Plotly chart with fixed parameters"""
+def safe_dataframe_display(df, **kwargs):
+    """Fallback safe dataframe display function"""
+    
+    # Handle deprecated use_container_width parameter
     if 'use_container_width' in kwargs:
-        kwargs.pop('use_container_width')
-    return st.plotly_chart(fig, **kwargs)
-
-def safe_metric_calculation(series, operation='mean'):
-    """Safely calculate metrics from series"""
-    if series is None or series.empty:
-        return 0.0
+        use_container_width = kwargs.pop('use_container_width')
+        kwargs['width'] = 'stretch' if use_container_width else 'content'
     
-    try:
-        if operation == 'mean':
-            return float(series.mean())
-        elif operation == 'sum':
-            return float(series.sum())
-        elif operation == 'count':
-            return int(len(series))
-        elif operation == 'rate':
-            return float((series.sum() / len(series)) * 100)
-        else:
-            return 0.0
-    except (TypeError, ValueError, AttributeError):
-        return 0.0
-
-def prepare_ml_features_safe(df):
-    """Prepare ML features with complete safety checks"""
-    features_df = df.copy()
+    # Prepare DataFrame for display
+    df_prepared = prepare_df_for_streamlit(df)
     
-    # Ensure all required columns exist
-    required_cols = {
-        'order_date': pd.Timestamp.now(),
-        'final_amount_inr': 1000,
-        'discount_percent': 10,
-        'customer_rating': 4.0,
-        'delivery_days': 3,
-        'customer_tenure_days': 365,
-        'previous_orders': 1,
-        'avg_order_value_history': 1000,
-        'category': 'Electronics',
-        'customer_city': 'Mumbai',
-        'age_group': '26-35',
-        'payment_method': 'UPI',
-        'is_prime_member': False
-    }
-    
-    for col, default_val in required_cols.items():
-        if col not in features_df.columns:
-            features_df[col] = default_val
-    
-    # Create derived columns safely
-    if 'order_date' in features_df.columns:
-        features_df['order_year'] = pd.to_datetime(features_df['order_date']).dt.year
-        features_df['order_month'] = pd.to_datetime(features_df['order_date']).dt.month
-        features_df['order_day_of_week'] = pd.to_datetime(features_df['order_date']).dt.dayofweek
-    else:
-        features_df['order_year'] = 2024
-        features_df['order_month'] = 6
-        features_df['order_day_of_week'] = 1
-    
-    features_df['is_weekend'] = features_df['order_day_of_week'].isin([5, 6]).astype(int)
-    
-    # Encode categorical variables safely
-    categorical_cols = ['category', 'customer_city', 'age_group', 'payment_method']
-    
-    for col in categorical_cols:
-        try:
-            le = LabelEncoder()
-            features_df[f'{col}_encoded'] = le.fit_transform(features_df[col].astype(str))
-        except:
-            features_df[f'{col}_encoded'] = 0
-    
-    # Convert boolean to int
-    features_df['is_prime_member'] = features_df['is_prime_member'].astype(int)
-    
-    # Define ML features list
-    ml_features = [
-        'final_amount_inr', 'discount_percent', 'customer_rating', 'delivery_days',
-        'customer_tenure_days', 'previous_orders', 'avg_order_value_history',
-        'category_encoded', 'customer_city_encoded', 'age_group_encoded', 'payment_method_encoded',
-        'is_prime_member', 'order_month', 'order_day_of_week', 'is_weekend'
-    ]
-    
-    # Ensure all ML features exist
-    for feature in ml_features:
-        if feature not in features_df.columns:
-            features_df[feature] = 0
-    
-    return features_df, ml_features
-
-
-
-
+    # Return Streamlit dataframe display
+    return st.dataframe(df_prepared, **kwargs)
