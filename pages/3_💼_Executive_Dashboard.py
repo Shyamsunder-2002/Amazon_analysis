@@ -13,6 +13,11 @@ import sys
 import os
 from datetime import datetime, timedelta
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 from config.settings import *
 
@@ -555,16 +560,16 @@ def main():
     with col1:
         # Revenue trend
         revenue_chart = create_revenue_trend_chart(df)
-        st.plotly_chart(revenue_chart, width="stretch")
+        st.plotly_chart(revenue_chart, use_container_width=True)
         
         # Business health scorecard
         health_chart = create_business_health_scorecard(df, kpis)
-        st.plotly_chart(health_chart, width="stretch")
+        st.plotly_chart(health_chart, use_container_width=True)
     
     with col2:
         # Strategic initiatives
         initiatives_chart, initiatives_data = create_strategic_initiatives_tracker(df)
-        st.plotly_chart(initiatives_chart, width="stretch")
+        st.plotly_chart(initiatives_chart, use_container_width=True)
         
         # Quick stats
         st.markdown("### 📋 Quick Stats")

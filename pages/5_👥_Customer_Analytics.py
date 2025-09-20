@@ -19,6 +19,11 @@ from operator import attrgetter
 import sys
 import os
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import helper functions with fallbacks
@@ -595,15 +600,15 @@ def main():
     # Main analytics
     st.markdown("## 🎯 Customer Segmentation Analysis")
     segmentation_chart = create_customer_segmentation_analysis(customer_filtered)
-    st.plotly_chart(segmentation_chart, width="stretch")
+    st.plotly_chart(segmentation_chart, use_container_width=True)
     
     st.markdown("## 📊 Customer Lifecycle Analysis")
     lifecycle_chart = create_customer_lifecycle_analysis(df_filtered, customer_filtered)
-    st.plotly_chart(lifecycle_chart, width="stretch")
+    st.plotly_chart(lifecycle_chart, use_container_width=True)
     
     st.markdown("## 🔍 Customer Behavior Analysis")
     behavior_chart = create_customer_behavior_analysis(df_filtered)
-    st.plotly_chart(behavior_chart, width="stretch")
+    st.plotly_chart(behavior_chart, use_container_width=True)
     
     # Customer insights
     display_customer_insights(df_filtered, metrics, customer_filtered)

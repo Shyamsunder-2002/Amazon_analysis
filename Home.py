@@ -146,7 +146,7 @@ def main():
         
         # Quick data preview
         with st.expander("🔍 Data Preview"):
-            st.dataframe(df.head(), width="stretch")
+            st.dataframe(df.head(), use_container_width=True)
     
     else:
         st.error("⚠️ Please run the setup script first to generate sample data")

@@ -189,13 +189,13 @@ def fix_all_analytics_files():
             content = f.read()
         
         # Fix use_container_width deprecation
-        content = re.sub(r'width="stretch"', 'width="stretch"', content)
-        content = re.sub(r'width="content"', 'width="content"', content)
+        content = re.sub(r'use_container_width=True', 'use_container_width=True', content)
+        content = re.sub(r'width=700', 'width=700', content)
         
         # Replace st.dataframe calls with safe version
         content = re.sub(r'st\.dataframe\((.*?)\)', r'st.dataframe(\1)', content)
-        content = re.sub(r'st\.plotly_chart\((.*?), width="stretch"\)', r'safe_plotly_chart(\1)', content)
-        content = re.sub(r'st\.plotly_chart\((.*?), width="content"\)', r'safe_plotly_chart(\1)', content)
+        content = re.sub(r'st\.plotly_chart\((.*?), use_container_width=True\)', r'safe_plotly_chart(\1)', content)
+        content = re.sub(r'st\.plotly_chart\((.*?), width=700\)', r'safe_plotly_chart(\1)', content)
         
         # Add imports at the top if not present
         if 'from utils import' not in content:

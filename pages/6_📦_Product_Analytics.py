@@ -13,6 +13,11 @@ import sys
 import os
 from datetime import datetime, timedelta
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 # Safe imports with fallbacks
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
@@ -301,7 +306,7 @@ def main():
     st.markdown("## 🏆 Top Performing Products")
     
     top_products = filtered_product_summary.nlargest(20, 'total_revenue')[['total_revenue', 'total_sales', 'avg_product_rating', 'return_rate']]
-    st.dataframe(top_products, width="stretch")
+    st.dataframe(top_products, use_container_width=True)
     
     # Category comparison
     st.markdown("## 📈 Category Comparison")

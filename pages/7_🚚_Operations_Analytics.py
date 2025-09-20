@@ -13,6 +13,11 @@ import sys
 import os
 from datetime import datetime, timedelta
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 # Safe imports with fallbacks
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
@@ -314,14 +319,14 @@ def main():
     with col1:
         st.markdown("### 🏙️ City Performance")
         if not city_performance.empty:
-            st.dataframe(city_performance.head(10), width="stretch")
+            st.dataframe(city_performance.head(10), use_container_width=True)
         else:
             st.info("No city performance data available")
     
     with col2:
         st.markdown("### 🚚 Shipping Partner Performance")
         if not partner_performance.empty:
-            st.dataframe(partner_performance.head(10), width="stretch")
+            st.dataframe(partner_performance.head(10), use_container_width=True)
         else:
             st.info("No partner performance data available")
 

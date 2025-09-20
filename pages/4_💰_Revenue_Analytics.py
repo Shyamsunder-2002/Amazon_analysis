@@ -13,6 +13,11 @@ import sys
 import os
 from datetime import datetime, timedelta
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 # Safe imports with fallbacks
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 

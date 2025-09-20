@@ -16,6 +16,11 @@ import os
 import sys
 import os
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import helper functions with fallbacks
@@ -545,7 +550,7 @@ def main():
             with col1:
                 st.markdown("**Revenue Statistics:**")
                 revenue_stats = df_filtered['final_amount_inr'].describe()
-                st.dataframe(revenue_stats, width="stretch")
+                st.dataframe(revenue_stats, use_container_width=True)
             
             with col2:
                 st.markdown("**Customer Statistics:**")
@@ -557,7 +562,7 @@ def main():
                 }
                 
                 stats_df = pd.DataFrame(list(customer_stats.items()), columns=['Metric', 'Value'])
-                st.dataframe(stats_df, width="stretch", hide_index=True)
+                st.dataframe(stats_df, use_container_width=True, hide_index=True)
     
     # Batch analysis option
     st.markdown("## 🚀 Batch Analysis")

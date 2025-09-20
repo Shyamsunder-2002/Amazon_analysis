@@ -16,6 +16,11 @@ import os
 import sys
 import os
 
+from pathlib import Path
+
+# Define data directory
+CLEANED_DATA_DIR = Path("data/cleaned")
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Import helper functions with fallbacks
@@ -331,7 +336,7 @@ def demonstrate_cleaning_challenges(df):
         if not df_cleaned.empty:
             fig = px.histogram(df_cleaned, x='order_date', nbins=50,
                              title="Distribution of Cleaned Order Dates")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
     
     elif selected_challenge == challenges[1]:  # Price cleaning
         st.markdown("""
@@ -361,7 +366,7 @@ def demonstrate_cleaning_challenges(df):
             if not valid_prices.empty:
                 fig = px.histogram(valid_prices, nbins=50,
                                  title="Distribution of Cleaned Prices")
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
     
     elif selected_challenge == challenges[2]:  # Rating cleaning
         st.markdown("""
@@ -388,7 +393,7 @@ def demonstrate_cleaning_challenges(df):
         # Rating distribution
         fig = px.histogram(df_rating_cleaned['customer_rating'], nbins=20,
                          title="Distribution of Standardized Ratings (1.0-5.0)")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     
     elif selected_challenge == challenges[3]:  # City standardization
         st.markdown("""
@@ -580,7 +585,7 @@ def main():
     # Data preview
     with st.expander("🔍 Raw Data Preview", expanded=False):
         st.markdown("### First 10 Rows of Raw Data")
-        st.dataframe(df.head(10), width="stretch")
+        st.dataframe(df.head(10), use_container_width=True)
         
         st.markdown("### Data Schema Information")
         col1, col2 = st.columns(2)
@@ -593,13 +598,13 @@ def main():
                 'Non-Null Count': df.count().values,
                 'Null Count': df.isnull().sum().values
             })
-            st.dataframe(dtype_info, width="stretch")
+            st.dataframe(dtype_info, use_container_width=True)
         
         with col2:
             st.markdown("**Statistical Summary:**")
             numeric_columns = df.select_dtypes(include=[np.number]).columns
             if len(numeric_columns) > 0:
-                st.dataframe(df[numeric_columns].describe(), width="stretch")
+                st.dataframe(df[numeric_columns].describe(), use_container_width=True)
             else:
                 st.info("No numeric columns found for statistical summary")
     
@@ -635,7 +640,7 @@ def main():
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
                 date_sample = df['order_date'].value_counts().to_frame().head(10)
-                st.dataframe(date_sample, width="stretch")
+                st.dataframe(date_sample, use_container_width=True)
                 
                 # Show problematic dates
                 st.markdown("**⚠️ Problematic Dates:**")
@@ -654,7 +659,7 @@ def main():
                         st.markdown("**✅ After Cleaning:**")
                         if not df_date_cleaned.empty:
                             cleaned_dates = df_date_cleaned['order_date'].dt.date.value_counts().to_frame().head(10)
-                            st.dataframe(cleaned_dates, width="stretch")
+                            st.dataframe(cleaned_dates, use_container_width=True)
                             
                             # Show cleaning statistics
                             original_count = len(df)
@@ -684,7 +689,7 @@ def main():
                                 nbins=50,
                                 title="Distribution of Valid Order Dates"
                             )
-                            st.plotly_chart(fig, width="stretch")
+                            st.plotly_chart(fig, use_container_width=True)
                     except:
                         st.info("Cannot create visualization due to date format issues")
     
@@ -715,7 +720,7 @@ def main():
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
                 price_sample = df[selected_price_col].value_counts().to_frame().head(10)
-                st.dataframe(price_sample, width="stretch")
+                st.dataframe(price_sample, use_container_width=True)
                 
                 # Show data types and issues
                 st.markdown("**📊 Price Column Analysis:**")
@@ -737,7 +742,7 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         cleaned_prices = df_price_cleaned[selected_price_col].describe()
-                        st.dataframe(cleaned_prices, width="stretch")
+                        st.dataframe(cleaned_prices, use_container_width=True)
                         
                         # Show cleaning effectiveness
                         original_valid = df[selected_price_col].notna().sum()
@@ -763,7 +768,7 @@ def main():
                                 title=f"Distribution of {selected_price_col}",
                                 labels={'x': 'Price (₹)', 'y': 'Frequency'}
                             )
-                            st.plotly_chart(fig, width="stretch")
+                            st.plotly_chart(fig, use_container_width=True)
                             
                             # Price statistics
                             st.markdown("**💹 Price Statistics:**")
@@ -805,7 +810,7 @@ def main():
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
                 rating_sample = df[selected_rating_col].value_counts().to_frame().head(10)
-                st.dataframe(rating_sample, width="stretch")
+                st.dataframe(rating_sample, use_container_width=True)
                 
                 # Rating format analysis
                 st.markdown("**🔍 Rating Format Analysis:**")
@@ -833,7 +838,7 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         cleaned_ratings = df_rating_cleaned[selected_rating_col].describe()
-                        st.dataframe(cleaned_ratings, width="stretch")
+                        st.dataframe(cleaned_ratings, use_container_width=True)
                         
                         # Rating distribution
                         rating_dist = df_rating_cleaned[selected_rating_col].value_counts().to_frame().sort_index()
@@ -860,7 +865,7 @@ def main():
                             title=f"Distribution of Cleaned {selected_rating_col}",
                             labels={'x': 'Rating (1.0-5.0)', 'y': 'Frequency'}
                         )
-                        st.plotly_chart(fig, width="stretch")
+                        st.plotly_chart(fig, use_container_width=True)
                         
                         # Rating quality metrics
                         st.markdown("**⭐ Rating Quality Metrics:**")
@@ -904,7 +909,7 @@ def main():
             with col1:
                 st.markdown("**🔴 Before Cleaning:**")
                 city_sample = df[selected_city_col].value_counts().to_frame().head(15)
-                st.dataframe(city_sample, width="stretch")
+                st.dataframe(city_sample, use_container_width=True)
                 
                 # Show city variations
                 st.markdown("**🔍 Identified Variations:**")
@@ -932,7 +937,7 @@ def main():
                         
                         st.markdown("**✅ After Cleaning:**")
                         cleaned_cities = df_city_cleaned[selected_city_col].value_counts().to_frame().head(15)
-                        st.dataframe(cleaned_cities, width="stretch")
+                        st.dataframe(cleaned_cities, use_container_width=True)
                         
                         # Show standardization results
                         original_unique = df[selected_city_col].nunique()
@@ -960,7 +965,7 @@ def main():
                         title="Top 15 Cities by Transaction Count",
                         labels={'x': 'Number of Transactions', 'y': 'City'}
                     )
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
     
     # Complete pipeline execution
     st.markdown("## 🚀 Complete Cleaning Pipeline")
@@ -1103,7 +1108,7 @@ def display_pipeline_results(original_df, cleaned_df, cleaning_reports):
     }
     
     comparison_df = pd.DataFrame(comparison_data)
-    st.dataframe(comparison_df, width="stretch", hide_index=True)
+    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
     
     # Detailed operation reports
     st.markdown("### 📋 Detailed Operation Reports")
@@ -1143,7 +1148,7 @@ def display_pipeline_results(original_df, cleaned_df, cleaning_reports):
                     ))
                     
                     fig.update_layout(height=200, margin=dict(l=0, r=0, t=0, b=0))
-                    st.plotly_chart(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
     
     # Data export options
     st.markdown("### 💾 Export Cleaned Data")
